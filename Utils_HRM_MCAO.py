@@ -309,33 +309,6 @@ def add_blur_to_ini_jitter(parser: ConfigParser, blur_mas):
 # Blur configuration families
 # ----------------------------------------------------------------------
 
-# 2 s detector
-blur_2s_detec_cfg = {
-    "enabled": True,
-    "models": {
-        "1": {
-            "law": "poly_plus_linear",
-            "poly_a_mas_per_arcsec2": -0.00009,
-            "poly_b_mas_per_arcsec": 0.062,
-            "poly_c_mas": 3.6034,
-            "poly_d_mas_per_arcsec": 0.1,
-        },
-        "2": {
-            "law": "polynomial",
-            "poly_a_mas_per_arcsec2": -0.00009,
-            "poly_b_mas_per_arcsec": 0.062,
-            "poly_c_mas": 3.6034,
-        },
-        "3": {
-            "law": "polynomial",
-            "poly_a_mas_per_arcsec2": 0.0005,
-            "poly_b_mas_per_arcsec": +0.00007,
-            "poly_c_mas": 3.7351,
-        },
-    },
-}
-
-
 # 900 s post AO
 blur_post_ao_cfg = {
     "enabled": True,
@@ -466,13 +439,36 @@ blur_single_ob_coarse_cfg = {
     },
 }
 
-BLUR_FAMILIES = {
-    "detector_2s": {
-        "label": "2s @ detector",
-        "config": blur_2s_detec_cfg,
+# Multi OB Coarse
+blur_multi_ob_coarse_cfg = {
+    "enabled": True,
+    "models": {
+        "1": { 
+            "law": "poly_plus_linear", 
+            "poly_a_mas_per_arcsec2": 0.0001, 
+            "poly_b_mas_per_arcsec": 0.0388, 
+            "poly_c_mas": 42.491,
+            "poly_d_mas_per_arcsec": 0.1
+                },
+        "2": {
+            "law": "polynomial", 
+            "poly_a_mas_per_arcsec2": 0.0001, 
+            "poly_b_mas_per_arcsec": 0.0388,
+            "poly_c_mas": 42.491
+            },
+        "3": { 
+            "law": "polynomial", 
+            "poly_a_mas_per_arcsec2": 0.0004, 
+            "poly_b_mas_per_arcsec": -0.0038,
+            "poly_c_mas": 42.641
+            },
     },
+}
+
+
+BLUR_FAMILIES = {
     "post_ao_900s": {
-        "label": "900s post AO",
+        "label": "900s @PCAM",
         "config": blur_post_ao_cfg,
     },
     "detector_900s": {
@@ -490,5 +486,9 @@ BLUR_FAMILIES = {
     "single_ob_coarse": {
         "label": "Single-OB #Coarse",
         "config": blur_single_ob_coarse_cfg,
+    },
+    "multi_ob_coarse": {
+        "label": "Multi-OB #Coarse",
+        "config": blur_multi_ob_coarse_cfg,
     },
 }
