@@ -99,6 +99,7 @@ def build_ini_only(
     mmse_rec_lo=True,
     # path_apodizer=None,
     path_pupil=None,
+    path_static_on=None,
 ):
     """
     Build a temporary INI file for one simulation without running TIPTOP.
@@ -234,6 +235,9 @@ def build_ini_only(
     if path_pupil is not None:
         parser.set("telescope", "PathPupil", repr(str(path_pupil)))
 
+    if path_static_on is not None:
+        parser.set("telescope", "PathStaticOn", repr(str(path_static_on)))
+
     margin_mas = 0.0
 
     if bool(include_margin):
@@ -304,6 +308,7 @@ def build_ini_only(
         "output_dir": output_dir,
         # "path_apodizer": path_apodizer,
         "path_pupil": path_pupil,
+        "path_static_on": path_static_on,
     }
 
 def compute_strehl_like_maoppy(psf, pupil, samp, threshold=None):

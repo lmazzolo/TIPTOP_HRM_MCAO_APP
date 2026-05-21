@@ -245,6 +245,10 @@ def derived_inputs_display(result):
                         "Pupil stop",
                         "CPS4 Pupil Stop" if result.get("path_pupil") else "Full aperture",
                     ),
+                    info_row(
+                        "Static WFE map",
+                        "Original + IPO" if result.get("path_static_on") else "Original",
+                    ),
                 ],
             ),
             section_card(
@@ -527,6 +531,21 @@ app.layout = html.Div(
                         html.Br(),
                         html.Div(id="apodizer_warning"),
                         html.Div(id="pupil_figure_container"),
+                        html.Br(),
+
+                        html.Label("Static WFE map", style=LABEL),
+                        dcc.RadioItems(
+                            id="static_wfe_mode",
+                            options=[
+                                {"label": "Original static map", "value": "original"},
+                                {"label": "Original + IPO worst-field map", "value": "ipo"},
+                            ],
+                            value="original",
+                            inline=False,
+                        ),
+                        html.Br(),
+                        html.Div(id="static_wfe_warning"),
+                        html.Div(id="static_wfe_figure_container"),
                         html.Br(),
 
                         dcc.Checklist(
@@ -820,6 +839,60 @@ def update_pupil_figure(mode):
         style={"marginTop": "10px"},
     )
 
+def _static_wfe_asset_style():
+    return {
+        "width": "100%",
+        "maxWidth": "1200px",
+        "border": "1px solid #ddd",
+        "borderRadius": "8px",
+    }
+
+# @app.callback(
+#     Output("static_wfe_warning", "children"),
+#     Input("static_wfe_mode", "value"),
+# )
+# def update_static_wfe_warning(mode):
+#     if mode == "ipo":
+#         return html.Div(
+#             [
+#                 "⚠ IPO static map selected. The simulation will use ",
+#                 html.Code("PathStaticOn = 'ELT_M1_MORFEO_DMs_static_plus_IPO_480px.fits'"),
+#                 ". Make sure this FITS file is available in the TIPTOP working/data path."
+#             ],
+#             style={
+#                 "marginTop": "8px",
+#                 "fontSize": "0.9rem",
+#                 "color": "#664d03",
+#                 "backgroundColor": "#fff3cd",
+#                 "padding": "8px 10px",
+#                 "borderRadius": "6px",
+#                 "border": "1px solid #ffecb5",
+#             },
+#         )
+#     return ""
+
+@app.callback(
+    Output("static_wfe_figure_container", "children"),
+    Input("static_wfe_mode", "value"),
+)
+def update_static_wfe_figure(mode):
+    if mode != "ipo":
+        return ""
+
+    return html.Div(
+        [
+            html.Div(
+                "Illustration of the static WFE map: original, IPO and combined map.",
+                style={"marginBottom": "8px", "fontSize": "0.95rem", "color": "#555"},
+            ),
+            html.Img(
+                src="/assets/static_ipo_schema.png",
+                style=_static_wfe_asset_style(),
+            ),
+        ],
+        style={"marginTop": "10px"},
+    )
+
 
 @app.callback(
     Output("blur_options_container", "style"),
@@ -867,6 +940,7 @@ def toggle_blur_sections(use_blur, blur_mode, use_margin):
     State("energy_mode", "value"),
     State("ee_radius_mas", "value"),
     State("apodizer_mode", "value"),
+    State("static_wfe_mode", "value"),
     State("use_blur", "value"),
     State("blur_mode", "value"),
     State("blur_family_key", "value"),
@@ -894,6 +968,7 @@ def handle_actions(
     energy_mode,
     ee_radius_mas,
     apodizer_mode,
+    static_wfe_mode,
     use_blur,
     blur_mode,
     blur_family_key,
@@ -914,6 +989,10 @@ def handle_actions(
         path_pupil = None
         if triggered == "run_button" and apodizer_mode == "undersized":
             path_pupil = "effective_pupil_480.fits" #tiptop ne gère pas correctement apodizer
+
+        path_static_on = None
+        if static_wfe_mode == "ipo":
+            path_static_on = "ELT_M1_MORFEO_DMs_static_plus_IPO_480px.fits"
 
         ini_info = build_ini_only(
             preset_name=preset,
@@ -940,6 +1019,7 @@ def handle_actions(
             mmse_rec_lo=True,
             # path_apodizer= path_apodizer,
             path_pupil=path_pupil,
+            path_static_on=path_static_on,
         )
 
         if triggered == "generate_ini_button":
