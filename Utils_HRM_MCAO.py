@@ -277,16 +277,48 @@ def compute_blur_mas(blur_cfg, bary_radius_arcsec, blur_model_key=None):
     return evaluate_blur_model(model_cfg, bary_radius_arcsec)
 
 
-def add_blur_to_ini_jitter(parser: ConfigParser, blur_mas):
-    """
-    Add blur in quadrature to telescope.jitter_FWHM.
-    """
-    if blur_mas is None:
-        return None
+def _read_telescope_diameter(parser: ConfigParser):
+    """Read telescope diameter from the INI parser when available."""
+    candidates = (
+        ("telescope", "TelescopeDiameter"),
+        ("telescope", "Diameter"),
+        ("telescope", "D"),
+    )
+    for section, key in candidates:
+        value, _kind = _read_ini_float_or_list_first(parser, section, key)
+        if value is not None and np.isfinite(float(value)) and float(value) > 0:
+            return float(value)
+    return None
 
-    if not np.isfinite(float(blur_mas)):
-        return None
 
+def nm2mas(wfe_nm, parser: ConfigParser):
+    """Conversion nm -> mas using telescope diameter.
+
+    Inverse of: mas2nm(wfe_mas, simul) = wfe_mas * D * 1.21
+    """
+    D = _read_telescope_diameter(parser)
+    if D is None:
+        raise ValueError(
+            "Could not convert margin from nm to mas: telescope diameter not found "
+            "in the INI telescope section. Expected TelescopeDiameter, Diameter, or D."
+        )
+    return float(wfe_nm) / (D * 1.21)
+
+def margin_nm_to_mas(margin_nm, parser):
+    if margin_nm is None:
+        return 0.0
+
+    margin_nm = float(margin_nm)
+
+    if margin_nm < 0:
+        raise ValueError("margin_nm must be >= 0.")
+
+    return nm2mas(margin_nm, parser)
+
+def add_blur_and_margin_to_ini_jitter(parser: ConfigParser, blur_mas=None, margin_mas=0.0):
+    """
+    Set telescope.jitter_FWHM = sqrt(initial_jitter^2 + blur_mas^2 + margin_mas^2).
+    """
     sec = "telescope"
     key = "jitter_FWHM"
 
@@ -295,12 +327,16 @@ def add_blur_to_ini_jitter(parser: ConfigParser, blur_mas):
         old = 0.0
         kind = "scalar"
 
-    new = float(np.sqrt(old**2 + float(blur_mas)**2))
+    blur_val = 0.0 if blur_mas is None else float(blur_mas)
+    margin_val = 0.0 if margin_mas is None else float(margin_mas)
+
+    new = float(np.sqrt(old**2 + blur_val**2 + margin_val**2))
     _write_ini_preserve_kind(parser, sec, key, new, kind)
 
     return {
         "jitter_old_mas": float(old),
-        "blur_mas": float(blur_mas),
+        "blur_mas": float(blur_val),
+        "margin_mas": float(margin_val),
         "jitter_new_mas": float(new),
     }
 

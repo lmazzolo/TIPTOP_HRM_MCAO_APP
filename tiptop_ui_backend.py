@@ -27,7 +27,8 @@ from Utils_HRM_MCAO import (
     _expand_to_list,
     compute_barycenter_from_polar,
     compute_blur_mas,
-    add_blur_to_ini_jitter,
+    margin_nm_to_mas,
+    add_blur_and_margin_to_ini_jitter,
     atmo_select,
     build_opt_lists,
     BLUR_FAMILIES,
@@ -87,6 +88,8 @@ def build_ini_only(
     blur_mode="family", # "family" or "custom"
     blur_family_key="post_ao_900s",
     custom_blur_mas=None,
+    include_margin=False,
+    margin_nm=None,
     ini_basename="HARMONI_MCAO",
     params_dir="./",
     output_dir=None,
@@ -231,7 +234,16 @@ def build_ini_only(
     if path_pupil is not None:
         parser.set("telescope", "PathPupil", repr(str(path_pupil)))
 
-    jitter_info = add_blur_to_ini_jitter(parser, blur_mas)
+    margin_mas = 0.0
+
+    if bool(include_margin):
+        margin_mas = margin_nm_to_mas(margin_nm, parser)
+
+    jitter_info = add_blur_and_margin_to_ini_jitter(
+        parser,
+        blur_mas=blur_mas if bool(use_blur) else 0.0,
+        margin_mas=margin_mas,
+    )
 
     _ensure_section(parser, "DM")
     parser.set("DM", "OptimizationZenith", str(optimization_zenith))
@@ -281,7 +293,11 @@ def build_ini_only(
         "blur_family_label": selected_blur_label,
         "blur_model_key": auto_blur_model_key,
         "barycenter": bary,
-        "blur_mas": blur_mas,
+        "blur_mas": None if not bool(use_blur) else float(blur_mas),
+        "base_blur_mas": None if blur_mas is None else float(blur_mas),
+        "include_margin": bool(include_margin),
+        "margin_nm": margin_nm,
+        "margin_mas": margin_mas,
         "jitter_info": jitter_info,
         "ini_file": ini_file,
         "ini_name": ini_name,

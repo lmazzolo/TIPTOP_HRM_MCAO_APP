@@ -280,6 +280,12 @@ def derived_inputs_display(result):
                         if result.get("blur_mode") == "custom"
                         else []
                     ),
+                    info_row("Precomputed blur [mas]", result.get("base_blur_mas", result.get("blur_mas")), digits=3),
+                    info_row("Include margin", "Yes" if result.get("include_margin", False) else "No"),
+                    *([
+                        info_row("Margin [nm]", result.get("margin_nm"), digits=3),
+                        info_row("Margin [mas]", result.get("margin_mas"), digits=3),
+                    ] if result.get("include_margin", False) else []),
                     info_row("Added blur [mas]", result["blur_mas"], digits=3),
                     info_row("Initial jitter_FWHM [mas]", jitter_value(result, "jitter_old_mas"), digits=3),
                     info_row("Final jitter_FWHM [mas]", jitter_value(result, "jitter_new_mas"), digits=3),
@@ -339,6 +345,12 @@ def ini_display(ini_info):
                             info_row("Barycenter X [arcsec]", ini_info["barycenter"]["x_arcsec"], digits=3),
                             info_row("Barycenter Y [arcsec]", ini_info["barycenter"]["y_arcsec"], digits=3),
                             info_row("Barycenter radius [arcsec]", ini_info["barycenter"]["radius_arcsec"], digits=3),
+                            info_row("Precomputed blur [mas]", ini_info.get("base_blur_mas", ini_info.get("blur_mas")), digits=3),
+                            info_row("Include margin", "Yes" if ini_info.get("include_margin", False) else "No"),
+                            *([
+                                info_row("Margin [nm]", ini_info.get("margin_nm"), digits=3),
+                                info_row("Margin [mas]", ini_info.get("margin_mas"), digits=3),
+                            ] if ini_info.get("include_margin", False) else []),
                             info_row("Added blur [mas]", ini_info["blur_mas"], digits=3),
                             info_row("Initial jitter [mas]", jitter_value(ini_info, "jitter_old_mas"), digits=3),
                             info_row("Final jitter [mas]", jitter_value(ini_info, "jitter_new_mas"), digits=3),
@@ -593,6 +605,45 @@ app.layout = html.Div(
                         ),
                         html.Br(),
 
+                        dcc.Checklist(
+                            id="use_margin",
+                            options=[{
+                                "label": html.Span(
+                                    "Include margin",
+                                    style={"fontWeight": "700"}
+                                ),
+                                "value": "yes"
+                            }],
+                            value=[],
+                        ),
+                        html.Br(),
+
+                        html.Div(
+                            id="margin_container",
+                            children=[
+                                html.Label("Margin [nm]", style=LABEL),
+                                dcc.Input(
+                                    id="margin_nm",
+                                    type="number",
+                                    value=0.0,
+                                    step="any",
+                                    min=0.0,
+                                    style=TEXT,
+                                ),
+                                html.Br(),
+                                html.Br(),
+                                # html.Div(
+                                #     [
+                                #         "Converted to mas and added in quadrature to ",
+                                #         html.Code("telescope.jitter_FWHM"),
+                                #         "."
+                                #     ],
+                                #     style={"fontSize": "0.92rem", "color": "#555"},
+                                # )
+                            ],
+                        ),
+                        html.Br(),
+
                         # html.Label("Strehl computation", style=LABEL),
                         # dcc.RadioItems(
                         #     id="sr_method",
@@ -774,25 +825,31 @@ def update_pupil_figure(mode):
     Output("blur_options_container", "style"),
     Output("blur_family_container", "style"),
     Output("custom_blur_container", "style"),
+    Output("margin_container", "style"),
     Input("use_blur", "value"),
     Input("blur_mode", "value"),
+    Input("use_margin", "value"),
 )
-def toggle_blur_sections(use_blur, blur_mode):
+def toggle_blur_sections(use_blur, blur_mode, use_margin):
+
     blur_enabled = parse_bool(use_blur)
+    margin_enabled = parse_bool(use_margin)
 
     hidden = {"display": "none"}
     visible = {"display": "block"}
 
+    margin_style = visible if margin_enabled else hidden
+
     if not blur_enabled:
-        return hidden, hidden, hidden
+        return hidden, hidden, hidden, margin_style
 
     if blur_mode == "family":
-        return visible, visible, hidden
+        return visible, visible, hidden, margin_style
 
     if blur_mode == "custom":
-        return visible, hidden, visible
+        return visible, hidden, visible, margin_style
 
-    return visible, hidden, hidden
+    return visible, hidden, hidden, margin_style
 
 
 @app.callback(
@@ -814,6 +871,8 @@ def toggle_blur_sections(use_blur, blur_mode):
     State("blur_mode", "value"),
     State("blur_family_key", "value"),
     State("custom_blur_mas", "value"),
+    State("use_margin", "value"),
+    State("margin_nm", "value"),
     # State("sr_method", "value"),
     State("save_fits", "value"),
     State("save_psds", "value"),
@@ -839,6 +898,8 @@ def handle_actions(
     blur_mode,
     blur_family_key,
     custom_blur_mas,
+    include_margin,
+    margin_nm,
     # sr_method,
     save_fits,
     save_psds,
@@ -868,6 +929,8 @@ def handle_actions(
             blur_mode=blur_mode,
             blur_family_key=blur_family_key,
             custom_blur_mas=custom_blur_mas,
+            include_margin=parse_bool(include_margin),
+            margin_nm=margin_nm,
             ini_basename="HARMONI_MCAO",
             params_dir="./",
             output_dir=None,
