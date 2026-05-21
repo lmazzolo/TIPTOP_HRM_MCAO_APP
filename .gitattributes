@@ -2,3 +2,4 @@
 effective_pupil_480.fits filter=lfs diff=lfs merge=lfs -text
 undersized_pupil_stop_480_on_ELTgrid.fits filter=lfs diff=lfs merge=lfs -text
 ELT_M1_MORFEO_DMs_static_plus_IPO_480px.fits filter=lfs diff=lfs merge=lfs -text
+assets/static_ipo_schema.png filter=lfs diff=lfs merge=lfs -text
